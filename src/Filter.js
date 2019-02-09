@@ -2,24 +2,22 @@ import Natural from 'natural';
 import React, { Component } from 'react';
 import { Alert, Button, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText } from 'reactstrap';
 import RDFStore from 'rdfstore';
-import Synonyms from 'synonyms';
 import Feature from './Feature';
+import Pos from 'pos';
 
-const Synonymator = require('synonymator');
-const API_KEY = "f581f85818017fb699477035dfca9dd4"
-const bighugelabs = `http://words.bighugelabs.com/api/2/'${API_KEY}/`
-let syn = new Synonymator(API_KEY);
+const bighugelabs_api_key = "f581f85818017fb699477035dfca9dd4"
+const bighugelabs = `//words.bighugelabs.com/api/2/${bighugelabs_api_key}/`
+
 
 let sentenceTokenizer  = new Natural.SentenceTokenizer()
 let wordTokenizer  = new Natural.WordTokenizer()
 let TfIdf = Natural.TfIdf; // Term Frequency–Inverse Document Frequency
 let tfidf = new TfIdf();
-const language = "EN"
-const defaultCategory = 'N';
-const defaultCategoryCapitalized = 'NNP';
-var lexicon = new Natural.Lexicon(language, defaultCategory, defaultCategoryCapitalized);
-var ruleSet = new Natural.RuleSet(language);
-var tagger = new Natural.BrillPOSTagger(lexicon, ruleSet);
+// const language = "EN"
+// const defaultCategory = 'N';
+// var lexicon = new Natural.Lexicon(language, defaultCategory);
+// var ruleSet = new Natural.RuleSet(language);
+// var tagger = new Natural.BrillPOSTagger(lexicon, ruleSet);
 let catStore;
 const notSelectedValue = "-- I don't know --";
 const ontologyURL = 'https://gist.githubusercontent.com/mikolasan/a25dd94c1aea9c8fcba77bc0f77fe252/raw/6bab5b3fb4c31a4d29423ceafea1d6ad4fe31771/cat-beeds-list-wikipedia-output-standard.ttl'
@@ -116,7 +114,7 @@ class Filter extends Component {
           this.showResults("")
           this.showNotification("There is no such cat breed that would satisfy to the current criteria.")
         }
-        
+
       }
     })
   }
@@ -195,43 +193,61 @@ class Filter extends Component {
     }
   }
 
-  runTokenizer() {
-    fetch(bighugelabs + 'cat' + '/json',
-      method: 'get', 
-      headers: new Headers({
-        
-      }))
-    .then(response => {
-      console.log(response)
-      response.json()
-    })
-    .then(data => console.log(data))
-    /*
+  searchSynonym(word) {
+    fetch(bighugelabs + word + '/json')
+    .then(response => response.json())
+  }
+
+  synonymsNoun(word) {
+    return this.searchSynonym(word).then((data) => data.noun.syn);
+  }
+
+  synonymsVerb(word) {
+    return this.searchSynonym(word).then((data) => data.verb.syn);
+  }
+
+  synonyms(word) {
+    return this.searchSynonym(word).then((data) => data.noun.syn.concat(data.verb.syn));
+  }
+
+  runTokenizer(paragraph) {
+    var words = new Pos.Lexer().lex(sampleText);
+    var tagger = new Pos.Tagger();
+    var taggedWords = tagger.tag(words);
+
     tfidf.addDocument(sampleText);
     var sentences = sentenceTokenizer.tokenize(sampleText);
     var seen = new Set();
     var weightTasks = [];
     sentences.forEach(sentence => {
       var tokens = wordTokenizer.tokenize(sentence)
-      var taggedSentence = tagger.tag(tokens);
+      //var taggedSentence = tagger.tag(tokens);
+      //console.log(taggedSentence)
       tokens.forEach((word, pos) => {
         if (seen.has(word))
           return
         seen.add(word);
-        let tag = taggedSentence.taggedWords[pos].tag;
+
+        for (let i in taggedWords) {
+            var taggedWord = taggedWords[i];
+            var w = taggedWord[0];
+            var tag = taggedWord[1];
+            console.log(w + " /" + tag);
+        }
+        //let tag = taggedSentence.taggedWords[pos].tag;
         //console.log(word, Natural.PorterStemmer.stem(word), Natural.LancasterStemmer.stem(word))
         let synonyms = undefined;
-        syn.synonyms(word).then((data) => {
-          console.log(data);
-        });
-        
-        syn.synonymsNoun(word).then((data) => {
-          console.log(data);
-        });
-        
-        syn.synonymsVerb(word).then((data) => {
-          console.log(data);
-        });
+        // syn.synonyms(word).then((data) => {
+        //   console.log(data);
+        // });
+        //
+        // syn.synonymsNoun(word).then((data) => {
+        //   console.log(data);
+        // });
+        //
+        // syn.synonymsVerb(word).then((data) => {
+        //   console.log(data);
+        // });
         if (typeof synonyms === "object") {
           if (synonyms.hasOwnProperty("synonyms")) {
             synonyms = synonyms.synonyms
@@ -263,7 +279,6 @@ class Filter extends Component {
       }
       this.showResults(html);
     })
-    */
   }
 
   render() {
