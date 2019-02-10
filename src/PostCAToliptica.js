@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
-import { Container, Col, Row, Button, Input} from 'reactstrap';
 import TitlePage from './TitlePage';
 import SearchResults from './SearchResults';
+import Engine from './engine';
+
+let engine = new Engine();
 
 class PostCAToliptica extends Component {
   constructor(props) {
@@ -9,17 +11,32 @@ class PostCAToliptica extends Component {
     this.state = {
       showResults: false
     }
-    
   }
-  
+
+  componentDidMount() {
+  }
+
   searchPressed(query) {
-    
+    console.log(query)
+    if (query.length > 0) {
+      let results = engine.search(query);
+      this.setState({
+        showResults: true,
+        results: results
+      })
+    }
+  }
+
+  getResults() {
+    return this.state.results
   }
 
   render() {
     return (
-      <TitlePage onSearchStarted={(query) => this.searchPressed(query)} />
-      <SearchResults visible={this.state.showResults}>
+      <React.Fragment>
+        <TitlePage onSearchStarted={(query) => this.searchPressed(query)} />
+        <SearchResults visible={this.state.showResults} getResults={() => this.getResults()}/>
+      </React.Fragment>
     )
   }
 }

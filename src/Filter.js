@@ -1,22 +1,14 @@
-import Natural from 'natural';
+
 import React, { Component } from 'react';
 import { Alert, Button, ListGroup, ListGroupItem, ListGroupItemHeading, ListGroupItemText } from 'reactstrap';
 import RDFStore from 'rdfstore';
-import PosTagger from 'wink-pos-tagger';
 import Feature from './Feature';
+import Engine from './engine';
 
-const bighugelabs_api_key = "f581f85818017fb699477035dfca9dd4"
-const bighugelabs = `//words.bighugelabs.com/api/2/${bighugelabs_api_key}/`
-
-let tagger = PosTagger();
-let sentenceTokenizer  = new Natural.SentenceTokenizer()
-let TermFrequency = Natural.TfIdf; // Term Frequency–Inverse Document Frequency
-let termFrequency = new TermFrequency();
+let engine = new Engine();
 let catStore;
 const notSelectedValue = "-- I don't know --";
 const ontologyURL = 'https://gist.githubusercontent.com/mikolasan/a25dd94c1aea9c8fcba77bc0f77fe252/raw/6bab5b3fb4c31a4d29423ceafea1d6ad4fe31771/cat-beeds-list-wikipedia-output-standard.ttl'
-const sampleText = 'The American Wirehair was discovered in 1966 from a mating of two ordinary barn cats in upstate New York. A spontaneous, incomplete dominant gene mutation occurred in a red-and-white male kitten, named Council Rock Farm Adam of Hi-Fi, which resulted in the wiry coat for which the breed is known.'
-//'The Turkish Angora may have been the first longhair cat in Europe and is believed to have descended from longhair cats in Turkey, Russia and Persia. The breed is named for the former Turkish capital of Angora, today known as Ankara.'
 
 class Filter extends Component {
   constructor(props) {
@@ -188,72 +180,7 @@ class Filter extends Component {
     }
   }
 
-  searchSynonym(word) {
-    console.log(word)
-    return fetch(bighugelabs + word + '/json')
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      } else if (response.status === 500) {
-        throw 'The Big Huge Thesaurus said big and fluffy goodbuy';
-      }
-    })
-  }
 
-  weightTokens(paragraph) {
-    termFrequency.addDocument(sampleText);
-    var sentences = sentenceTokenizer.tokenize(sampleText);
-    var seen = new Set();
-    var weightTasks = [];
-    sentences.forEach(sentence => {
-      var taggedSentence = tagger.tagSentence(sentence);
-      console.log(taggedSentence)
-      taggedSentence.forEach(token => {
-        var word = token.value;
-        var pos = token.pos;
-        if (token.tag !== "word" || seen.has(word))
-          return
-        if (!pos.includes("NN") && !pos.includes("VB"))
-          return
-        seen.add(word);
-        let weightTask = new Promise(resolve => {
-          termFrequency.tfidfs(word, (i, weight) => {
-            resolve({word: word, pos: pos, weight: weight})
-          })
-        });
-        weightTasks.push(weightTask);
-      });
-    })
-    return Promise.all(weightTasks);
-  }
-
-  finalTokens(weightedTokens) {
-    var self = this;
-    var synonymTasks = [];
-    weightedTokens.sort((first, second) => first.weight < second.weight)
-    var valuableTokens = weightedTokens.filter(token => token.weight > 0).slice(0, 1)
-    for (let i = 0; i < valuableTokens.length; ++i) {
-      let token = valuableTokens[i]
-      var synonymTask = new Promise(resolve => {
-        self.searchSynonym(token.word)
-        .then(data => {
-          console.log("searchSynonym", data)
-          var synonyms = []
-          if (token.pos.includes("NN")) {
-            synonyms = data.noun.syn;
-          } else if (token.pos.includes("VB")) {
-            synonyms = data.verb.syn;
-          }
-          token.synonyms = synonyms;
-          console.lof("synonymTask", token)
-          resolve(token)
-        })
-        .catch(err => resolve(token))
-      })
-      synonymTasks.push(synonymTask)
-    }
-    return Promise.all(synonymTasks);
-  }
 
   displayFinalTokens(finalTokens) {
     var html = [];
@@ -269,8 +196,7 @@ class Filter extends Component {
   }
 
   runTokenizer(paragraph) {
-    this.weightTokens(paragraph)
-    .then(weightedTokens => this.finalTokens(weightedTokens))
+    engine.prepareBase(paragraph)
     .then(finalTokens => this.displayFinalTokens(finalTokens))
     .catch(err => this.showError(err))
   }
