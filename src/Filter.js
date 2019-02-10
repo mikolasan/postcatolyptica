@@ -27,6 +27,7 @@ class Filter extends Component {
       errorMessage: null,
       notification: null,
     };
+    //this.searchSynonym = this.searchSynonym.bind(this)
   }
 
   componentDidMount() {
@@ -188,23 +189,18 @@ class Filter extends Component {
   }
 
   searchSynonym(word) {
-    fetch(bighugelabs + word + '/json')
-    .then(response => response.json())
+    console.log(word)
+    return fetch(bighugelabs + word + '/json')
+    .then(response => {
+      if (response.ok) {
+        return response.json();
+      } else if (response.status === 500) {
+        throw 'The Big Huge Thesaurus said big and fluffy goodbuy';
+      }
+    })
   }
 
-  synonymsNoun(word) {
-    return this.searchSynonym(word).then((data) => data.noun.syn);
-  }
-
-  synonymsVerb(word) {
-    return this.searchSynonym(word).then((data) => data.verb.syn);
-  }
-
-  synonyms(word) {
-    return this.searchSynonym(word).then((data) => data.noun.syn.concat(data.verb.syn));
-  }
-
-  runTokenizer(paragraph) {
+  weightTokens(paragraph) {
     termFrequency.addDocument(sampleText);
     var sentences = sentenceTokenizer.tokenize(sampleText);
     var seen = new Set();
@@ -228,41 +224,55 @@ class Filter extends Component {
         weightTasks.push(weightTask);
       });
     })
-    var html = [];
-    var synonymTasks = []
-    Promise.all(weightTasks)
-    .then((weightedTokens) => {
-      weightedTokens.sort((first, second) => first.weight < second.weight)
-      var valuableTokens = weightedTokens.filter(token => token.weight > 0).slice(0, 5)
-      weightedTokens.forEach(token => {
-        var synonymTask = new Promise(resolve => {
-          this.searchSynonym(word)
-          .then(data => {
-            var synonyms = []
-            if (token.pos.includes("NN")) {
-              synonyms = data.noun.syn;
-            } else if (token.pos.includes("VB")) {
-              synonyms = data.verb.syn;
-            }
-            token.synonyms = synonyms;
-            resolve(token)
-          })
+    return Promise.all(weightTasks);
+  }
+
+  finalTokens(weightedTokens) {
+    var self = this;
+    var synonymTasks = [];
+    weightedTokens.sort((first, second) => first.weight < second.weight)
+    var valuableTokens = weightedTokens.filter(token => token.weight > 0).slice(0, 1)
+    for (let i = 0; i < valuableTokens.length; ++i) {
+      let token = valuableTokens[i]
+      var synonymTask = new Promise(resolve => {
+        self.searchSynonym(token.word)
+        .then(data => {
+          console.log("searchSynonym", data)
+          var synonyms = []
+          if (token.pos.includes("NN")) {
+            synonyms = data.noun.syn;
+          } else if (token.pos.includes("VB")) {
+            synonyms = data.verb.syn;
+          }
+          token.synonyms = synonyms;
+          console.lof("synonymTask", token)
+          resolve(token)
         })
-        synonymTasks.push(synonymTask)
+        .catch(err => resolve(token))
       })
-    })
-    Promise.all(synonymTasks)
-    .then((finalTokens) => {
-      for (let i = 0; i < finalTokens.length; ++i) {
-        let t = finalTokens[i]
-        html.push((
-          <p>
-            {t.word}: [{t.synonyms? t.synonyms.join(',') : '??'}] ({t.weight})
-          </p>
-        ));
-      }
-      this.showResults(html);
-    })
+      synonymTasks.push(synonymTask)
+    }
+    return Promise.all(synonymTasks);
+  }
+
+  displayFinalTokens(finalTokens) {
+    var html = [];
+    for (let i = 0; i < finalTokens.length; ++i) {
+      let t = finalTokens[i]
+      html.push((
+        <p>
+          {t.word}: [{t.synonyms? t.synonyms.join(',') : '??'}] ({t.weight})
+        </p>
+      ));
+    }
+    this.showResults(html);
+  }
+
+  runTokenizer(paragraph) {
+    this.weightTokens(paragraph)
+    .then(weightedTokens => this.finalTokens(weightedTokens))
+    .then(finalTokens => this.displayFinalTokens(finalTokens))
+    .catch(err => this.showError(err))
   }
 
   render() {
@@ -275,7 +285,7 @@ class Filter extends Component {
           <Button color="primary" onClick={() => this.formQuestion()}>Find a breed</Button>{' '}
           <Button color="warning" onClick={() => this.clearResults()}>Clear Results</Button>
         </p>
-        <Button color="primary" onClick={() => this.runTokenizer()}>Run tokenizer</Button>
+        <Button color="primary" onClick={() => this.runTokenizer(sampleText)}>Run tokenizer</Button>
         {this.state.errorMessage}
         {this.state.notification}
         {this.state.question}
