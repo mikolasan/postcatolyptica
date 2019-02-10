@@ -5,12 +5,12 @@
   "dependencies": {
     "bootstrap": "4.2.1",
     "natural": "0.6.3",
-    "pos": "^0.4.2",
     "rdfstore": "0.9.17",
     "react": "^16.5.2",
     "react-dom": "^16.5.2",
     "react-scripts": "2.0.3",
-    "reactstrap": "7.1.0"
+    "reactstrap": "7.1.0",
+    "wink-pos-tagger": "^2.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
