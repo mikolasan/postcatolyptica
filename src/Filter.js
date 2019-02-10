@@ -10,9 +10,8 @@ const bighugelabs = `//words.bighugelabs.com/api/2/${bighugelabs_api_key}/`
 
 let tagger = PosTagger();
 let sentenceTokenizer  = new Natural.SentenceTokenizer()
-let wordTokenizer  = new Natural.WordTokenizer()
-let TfIdf = Natural.TfIdf; // Term Frequency–Inverse Document Frequency
-let tfidf = new TfIdf();
+let TermFrequency = Natural.TfIdf; // Term Frequency–Inverse Document Frequency
+let termFrequency = new TermFrequency();
 let catStore;
 const notSelectedValue = "-- I don't know --";
 const ontologyURL = 'https://gist.githubusercontent.com/mikolasan/a25dd94c1aea9c8fcba77bc0f77fe252/raw/6bab5b3fb4c31a4d29423ceafea1d6ad4fe31771/cat-beeds-list-wikipedia-output-standard.ttl'
@@ -206,7 +205,7 @@ class Filter extends Component {
   }
 
   runTokenizer(paragraph) {
-    tfidf.addDocument(sampleText);
+    termFrequency.addDocument(sampleText);
     var sentences = sentenceTokenizer.tokenize(sampleText);
     var seen = new Set();
     var weightTasks = [];
@@ -218,11 +217,11 @@ class Filter extends Component {
         var pos = token.pos;
         if (token.tag !== "word" || seen.has(word))
           return
-        if (pos !== "NN" && !pos.includes("VB"))
+        if (!pos.includes("NN") && !pos.includes("VB"))
           return
         seen.add(word);
         let weightTask = new Promise(resolve => {
-          tfidf.tfidfs(word, (i, weight) => {
+          termFrequency.tfidfs(word, (i, weight) => {
             resolve({word: word, pos: pos, weight: weight})
           })
         });
@@ -230,29 +229,40 @@ class Filter extends Component {
       });
     })
     var html = [];
+    var synonymTasks = []
     Promise.all(weightTasks)
     .then((weightedTokens) => {
       weightedTokens.sort((first, second) => first.weight < second.weight)
-      for (let i = 0; i < weightedTokens.length; ++i) {
+      var valuableTokens = weightedTokens.filter(token => token.weight > 0).slice(0, 5)
+      weightedTokens.forEach(token => {
+        var synonymTask = new Promise(resolve => {
+          this.searchSynonym(word)
+          .then(data => {
+            var synonyms = []
+            if (token.pos.includes("NN")) {
+              synonyms = data.noun.syn;
+            } else if (token.pos.includes("VB")) {
+              synonyms = data.verb.syn;
+            }
+            token.synonyms = synonyms;
+            resolve(token)
+          })
+        })
+        synonymTasks.push(synonymTask)
+      })
+    })
+    Promise.all(synonymTasks)
+    .then((finalTokens) => {
+      for (let i = 0; i < finalTokens.length; ++i) {
+        let t = finalTokens[i]
         html.push((
           <p>
-            {weightedTokens[i].word}: [{weightedTokens[i].synonyms? weightedTokens[i].synonyms.join(',') : '??'}] ({weightedTokens[i].weight})
+            {t.word}: [{t.synonyms? t.synonyms.join(',') : '??'}] ({t.weight})
           </p>
         ));
       }
       this.showResults(html);
     })
-    // syn.synonyms(word).then((data) => {
-    //   console.log(data);
-    // });
-    //
-    // syn.synonymsNoun(word).then((data) => {
-    //   console.log(data);
-    // });
-    //
-    // syn.synonymsVerb(word).then((data) => {
-    //   console.log(data);
-    // });
   }
 
   render() {
