@@ -1,14 +1,11 @@
 import React, { Component } from 'react';
-import Filter from './Filter';
+import PostCAToliptica from './PostCAToliptica';
 import './App.css';
 
 class App extends Component {
   render() {
     return (
-      <React.Fragment>
-        <h1>Cat Bible</h1>
-        <Filter />
-      </React.Fragment>
+      <PostCAToliptica />
     );
   }
 }
