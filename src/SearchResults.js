@@ -19,11 +19,11 @@ class SearchResults extends Component {
           <CardBody>
             <CardTitle>
               <h2>
-                {record.breed}{' '}<Badge color="secondary">{record.score}</Badge>
+                {record.title}{' '}<Badge color="secondary">{record.totalScore}</Badge>
               </h2>
             </CardTitle>
             <CardSubtitle>Description</CardSubtitle>
-            <CardText>{record.description}</CardText>
+            <CardText>{record.breed}</CardText>
             <CardSubtitle>Did you know?</CardSubtitle>
             <CardText>{record.did_you_know}</CardText>
           </CardBody>

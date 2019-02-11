@@ -101,27 +101,34 @@ class CatSearchEngine {
   prepareBase() {
     for (const [breed, details] of Object.entries(Cats)) {
       console.log(breed, details)
-      let paragraph = details.description + details.did_you_know
+      let paragraph = details.size + ". " + details.coat + ". " + details.color + ". " + details.description + details.did_you_know
       this.weightTokens(paragraph)
       .then(weightedTokens => this.finalTokens(weightedTokens))
       .then(finalTokens => this.saveTokens(finalTokens, breed))
     }
   }
 
+  scoreWords(a, b) {
+    return Natural.JaroWinklerDistance(a, b);
+  }
+
   search(query) {
     var result = []
     for (let breed in Cats) {
-      let counts = 0
-      //console.log("search / breed", Cats[breed].words)
-      for (let i = 0; i <  Cats[breed].words.length; ++i) {
-        let word = Cats[breed].words[i]
-        //console.log("search", query, word, query === word, counts)
-        if (query === word) {
-          counts++;
+      let totalScore = 0;
+      let tokens = Cats[breed].tokens;
+      for (let t = 0; t < tokens.length; ++t) {
+        let token = tokens[t];
+        let wordScore = 0
+        wordScore += this.scoreWords(query, token.word);
+        for (let s = 0; s < token.synonyms.length; ++s) {
+          let word = token.synonyms[s]
+          wordScore += this.scoreWords(query, word);
         }
+        token.wordScore = wordScore;
+        totalScore += wordScore;
       }
-      console.log("search / counts", counts)
-      Cats[breed].score = counts;
+      Cats[breed].totalScore = totalScore;
       Cats[breed].breed = breed;
       if (totalScore > 0) {
         result.push(Cats[breed]);
