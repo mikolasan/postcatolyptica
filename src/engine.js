@@ -1,9 +1,7 @@
 import Natural from 'natural';
 import PosTagger from 'wink-pos-tagger';
-import Cats from './cats-db';
-
-const bighugelabs_api_key = "f581f85818017fb699477035dfca9dd4"
-const bighugelabs = `//words.bighugelabs.com/api/2/${bighugelabs_api_key}/`
+import Cats from './cats-db.json';
+import Synonyms from './synonyms.json';
 
 let tagger = PosTagger();
 let sentenceTokenizer  = new Natural.SentenceTokenizer()
@@ -18,18 +16,7 @@ class CatSearchEngine {
   }
 
   searchSynonym(word) {
-    return Promise.resolve({noun:{syn:['apple']},verb:{syn:['drink']}})
-    /*
-    console.log(word)
-    return fetch(bighugelabs + word + '/json')
-    .then(response => {
-      if (response.ok) {
-        return response.json();
-      } else if (response.status === 500) {
-        throw 'The Big Huge Thesaurus said big and fluffy goodbuy';
-      }
-    })
-    */
+    return Promise.resolve(Synonyms[word] || [])
   }
 
   weightTokens(paragraph) {
@@ -67,13 +54,7 @@ class CatSearchEngine {
       let token = valuableTokens[i]
       var synonymTask = new Promise(resolve => {
         self.searchSynonym(token.word)
-        .then(data => {
-          var synonyms = []
-          if (token.pos.includes("NN")) {
-            synonyms = data.noun.syn;
-          } else if (token.pos.includes("VB")) {
-            synonyms = data.verb.syn;
-          }
+        .then(synonyms => {
           token.synonyms = synonyms;
           resolve(token)
         })

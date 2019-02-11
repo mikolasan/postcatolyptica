@@ -42,7 +42,7 @@ def add_description(url, breed_data):
     div = section.find('div', attrs={'class':'quarantine'})
     p = div.p
     while p:
-        description += p.text
+        description += p.text.strip()
         p = p.find_next_sibling()
     breed_data['description'] = description
 
@@ -55,7 +55,7 @@ def add_description(url, breed_data):
             p = p.find_next_sibling()
             value = ''
             while True:
-                value += p.text
+                value += p.text.strip()
                 p = p.find_next_sibling()
                 if not p or p.strong:
                     break
@@ -64,7 +64,7 @@ def add_description(url, breed_data):
             elif key in ['lifespan', 'colors', 'shedding', 'health']:
                 breed_data[key] = value
     else:
-        did_you_know = div.p.text
+        did_you_know = div.p.text.strip()
     breed_data['did_you_know'] = did_you_know
 
 
@@ -95,18 +95,21 @@ def load_breeds():
     with open("cats-db.json", "r") as read_file:
         return json.load(read_file)
 
-breeds = load_breeds()
-for breed_name, breed_data in breeds.items():
-    if 'Lifespan' in breed_data['did_you_know']:
-        print(breed_data['url'])
-        add_description(breed_data['url'], breed_data)
-        breeds[breed_name] = breed_data
-
-save_breeds(breeds)
-
-# breeds = collect_breeds()
+## Fix 'Did you know?' section: parse extra paragraphs
+# breeds = load_breeds()
+# for breed_name, breed_data in breeds.items():
+#     if 'Lifespan' in breed_data['did_you_know']:
+#         print(breed_data['url'])
+#         add_description(breed_data['url'], breed_data)
+#         breeds[breed_name] = breed_data
+#
 # save_breeds(breeds)
 
+## Main procedure
+breeds = collect_breeds()
+save_breeds(breeds)
+
+## Small part for tests
 # breed_data = {}
 # add_description("https://www.purina.com/cats/cat-breeds/chartreux", breed_data)
 # save_breeds(breed_data)

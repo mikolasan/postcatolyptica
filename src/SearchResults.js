@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Alert, Badge, Row, Col, Card, CardImg, CardText, CardBody, CardTitle, CardSubtitle } from 'reactstrap';
+import { Badge, Row, Col, Card, CardImg, CardText, CardBody, CardSubtitle } from 'reactstrap';
 
 class SearchResults extends Component {
 
@@ -11,16 +11,17 @@ class SearchResults extends Component {
     return results.map(record => {
       var title = (
         <h2>
-          {record.title.excerpt1}<strong>{record.title.highlightWord}</strong>{record.title.excerpt2}{' '}<Badge color="secondary">{record.totalScore}</Badge>
+          {record.title.excerpt1}<strong>{record.title.highlightWord}</strong>{record.title.excerpt2}
         </h2>
       )
       return (
         <Card>
+          <CardImg bottom src={record.img} alt={record.breed} />
           <CardBody>
-            <CardTitle>
+            <CardSubtitle>{record.breed}{' '}<Badge color="secondary">{record.totalScore}</Badge></CardSubtitle>
+            <CardText>
               {title}
-            </CardTitle>
-            <CardText>{record.breed}</CardText>
+            </CardText>
           </CardBody>
         </Card>
       )
