@@ -123,8 +123,9 @@ class CatSearchEngine {
       console.log("search / counts", counts)
       Cats[breed].score = counts;
       Cats[breed].breed = breed;
-      //if (counts > 0)
-      result.push(Cats[breed])
+      if (totalScore > 0) {
+        result.push(Cats[breed]);
+      }
     }
     return result.sort((a, b) => a.score < b.score).splice(0, 5)
   }

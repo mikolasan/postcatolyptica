@@ -17,9 +17,9 @@ class PostCAToliptica extends Component {
   }
 
   searchPressed(query) {
-    console.log(query)
     if (query.length > 0) {
       let results = engine.search(query);
+      console.log("searchPressed", query, results.length)
       this.setState({
         showResults: true,
         results: results

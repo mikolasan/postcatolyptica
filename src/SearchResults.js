@@ -1,16 +1,17 @@
 import React, { Component } from 'react';
-import { TabContent, TabPane, Nav, NavItem, NavLink, Badge, Row, Col, Card, CardImg, CardText, CardBody, CardTitle, CardSubtitle } from 'reactstrap';
-import classnames from 'classnames';
+import { Alert, Badge, Row, Col, Card, CardImg, CardText, CardBody, CardTitle, CardSubtitle } from 'reactstrap';
 
 class SearchResults extends Component {
   constructor(props) {
     super(props);
-    this.input = React.createRef();
   }
 
   renderResults() {
     var results = this.props.getResults()
     console.log("renderResults", results)
+    if (results.length === 0) {
+      return <h2>Your search did not match any documents</h2>
+    }
     return results.map(record => {
       console.log("renderResults", record)
       return (
@@ -38,12 +39,14 @@ class SearchResults extends Component {
       return  (
         <div>
           <Row>
-            <Col sm="12">
+            <Col sm={{ size: 6, offset: 1 }}>
               <h4>Search results</h4>
             </Col>
           </Row>
           <Row>
-            {this.renderResults()}
+            <Col sm={{ size: 6, offset: 1 }}>
+              {this.renderResults()}
+            </Col>
           </Row>
         </div>
       )
