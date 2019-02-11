@@ -37,9 +37,35 @@ def add_description(url, breed_data):
         value = dd.div.find_next_sibling('div').text.strip()
         breed_data[key] = value
         dd = dd.find_next('dd')
+
+    description = ''
     div = section.find('div', attrs={'class':'quarantine'})
-    breed_data['description'] = div.p.text
-    breed_data['did_you_know'] = div.find_next('div', attrs={'class':'quarantine'}).p.text
+    p = div.p
+    while p:
+        description += p.text
+        p = p.find_next_sibling()
+    breed_data['description'] = description
+
+    did_you_know = ''
+    div = div.find_next('div', attrs={'class':'quarantine'})
+    if div.p.strong:
+        p = div.p
+        while p:
+            key = p.text.lower().strip()
+            p = p.find_next_sibling()
+            value = ''
+            while True:
+                value += p.text
+                p = p.find_next_sibling()
+                if not p or p.strong:
+                    break
+            if key in ['characteristics', 'history', 'facts']:
+                did_you_know += value
+            elif key in ['lifespan', 'colors', 'shedding', 'health']:
+                breed_data[key] = value
+    else:
+        did_you_know = div.p.text
+    breed_data['did_you_know'] = did_you_know
 
 
 def collect_breeds():
@@ -62,11 +88,24 @@ def collect_breeds():
     return breeds
 
 def save_breeds(breeds):
-    with open("cats-db.js", "w") as db:
-        json.dump(breeds, db)
+    with open("cats-db.json", "w") as db:
+        json.dump(breeds, db, indent=2)
 
-breeds = collect_breeds()
+def load_breeds():
+    with open("cats-db.json", "r") as read_file:
+        return json.load(read_file)
+
+breeds = load_breeds()
+for breed_name, breed_data in breeds.items():
+    if 'Lifespan' in breed_data['did_you_know']:
+        print(breed_data['url'])
+        add_description(breed_data['url'], breed_data)
+        breeds[breed_name] = breed_data
+
 save_breeds(breeds)
+
+# breeds = collect_breeds()
+# save_breeds(breeds)
 
 # breed_data = {}
 # add_description("https://www.purina.com/cats/cat-breeds/chartreux", breed_data)
