@@ -3,7 +3,8 @@ import TitlePage from './TitlePage';
 import SearchResults from './SearchResults';
 import Engine from './engine';
 
-let engine = new Engine();
+let engine = null;
+let engineReady = false;
 
 class PostCAToliptica extends Component {
   constructor(props) {
@@ -14,10 +15,17 @@ class PostCAToliptica extends Component {
   }
 
   componentDidMount() {
+    engine = new Engine((err, data) => {
+      if (!err) {
+        engineReady = true;
+      } else {
+        console.log(err)
+      }
+    });
   }
 
   searchPressed(query) {
-    if (query.length > 0) {
+    if (query.length > 0 && engineReady) {
       let results = engine.search(query);
       console.log("searchPressed", query, results.length)
       this.setState({

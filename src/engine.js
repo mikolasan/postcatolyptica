@@ -1,89 +1,77 @@
 import Natural from 'natural';
-import PosTagger from 'wink-pos-tagger';
+import Pos from 'pos';
 import Cats from './cats-db.json';
 import Synonyms from './synonyms.json';
 
-let tagger = PosTagger();
-let sentenceTokenizer  = new Natural.SentenceTokenizer()
-let wordTokenizer = new Natural.WordTokenizer()
+let tagger = new Pos.Tagger();
+let sentenceTokenizer  = new Natural.SentenceTokenizer();
+let wordTokenizer = new Natural.WordTokenizer();
 let TermFrequency = Natural.TfIdf; // Term Frequency–Inverse Document Frequency
 let termFrequency = new TermFrequency();
 
 
 class CatSearchEngine {
-  constructor() {
-    this.prepareBase();
+  constructor(callback) {
+    this.prepareBase(callback);
   }
 
-  searchSynonym(word) {
-    return Promise.resolve(Synonyms[word] || [])
-  }
-
-  weightTokens(paragraph) {
-    termFrequency.addDocument(paragraph);
-    var sentences = sentenceTokenizer.tokenize(paragraph);
+  extractModelWords(taggedWords) {
     var seen = new Set();
-    var weightTasks = [];
-    sentences.forEach(sentence => {
-      var taggedSentence = tagger.tagSentence(sentence);
-      taggedSentence.forEach(token => {
-        var word = token.value;
-        var pos = token.pos;
-        if (token.tag !== "word" || seen.has(word))
-          return
-        if (!pos.includes("NN") && !pos.includes("VB"))
-          return
-        seen.add(word);
-        let weightTask = new Promise(resolve => {
-          termFrequency.tfidfs(word, (i, weight) => {
-            resolve({word: word, pos: pos, weight: weight})
-          })
-        });
-        weightTasks.push(weightTask);
-      });
+    return taggedWords.filter(token => {
+      var word = token[0];
+      var pos = token[1];
+      if (seen.has(word))
+        return false;
+      if (!pos.includes("NN") && !pos.includes("VB"))
+        return false;
+      seen.add(word);
+      return true;
     })
-    return Promise.all(weightTasks);
+    .map(token => {
+      return {word: token[0], pos: token[1]};
+    });
   }
 
-  finalTokens(weightedTokens) {
-    var self = this;
-    var synonymTasks = [];
-    weightedTokens.sort((first, second) => first.weight < second.weight)
-    var valuableTokens = weightedTokens//.filter(token => token.weight > 0).slice(0, 10)
-    for (let i = 0; i < valuableTokens.length; ++i) {
-      let token = valuableTokens[i]
-      var synonymTask = new Promise(resolve => {
-        self.searchSynonym(token.word)
-        .then(synonyms => {
-          token.synonyms = synonyms;
-          resolve(token)
-        })
-        .catch(err => resolve(token))
-      })
-      synonymTasks.push(synonymTask)
+  preProcessText() {
+    var paragraphId = 0;
+    for (let [breed, details] of Object.values(Cats)) {
+      let paragraph = details.size + ". " + details.coat + ". " + details.color + ". " + details.description + details.did_you_know;
+      termFrequency.addDocument(paragraph);
+      Cats[breed].paragraphId = paragraphId;
+      Cats[breed].paragraph = paragraph;
+      let sentencesRaw = sentenceTokenizer.tokenize(paragraph);
+      Cats[breed].model = {};
+      Cats[breed].sentences = sentencesRaw.map(sentence => {
+        var words = wordTokenizer.tokenize(sentence);
+        var taggedSentence = tagger.tag(words);
+        var modelWords = this.extractModelWords(taggedSentence);
+        modelWords.forEach(token => {
+          Cats[breed].model[token.word] = token;
+        });
+        return {
+          text: sentence,
+          words: words,
+          modelWords: modelWords
+        };
+      });
+      ++paragraphId;
     }
-    return Promise.all(synonymTasks);
   }
 
-  saveTokens(tokens, breed) {
-    Cats[breed].tokens = tokens;
-    var words = [];
-    for (let i = 0; i < tokens.length; ++i) {
-      let t = tokens[i];
-      words.push(t.word)
-      words = words.concat(t.synonyms)
+  weightTokens() {
+    for (let breed in Cats) {
+      let details = Cats[breed];
+      for (let word in details.model) {
+        details.model[word].weight = termFrequency.tfidf(word, details.paragraphId);
+        details.model[word].synonyms = Synonyms[word] || [];
+      }
     }
-    Cats[breed].words = words;
-    return tokens;
   }
 
-  prepareBase() {
-    for (const [breed, details] of Object.entries(Cats)) {
-      let paragraph = details.size + ". " + details.coat + ". " + details.color + ". " + details.description + details.did_you_know
-      this.weightTokens(paragraph)
-      .then(weightedTokens => this.finalTokens(weightedTokens))
-      .then(finalTokens => this.saveTokens(finalTokens, breed))
-    }
+  prepareBase(callback) {
+    this.preProcessText();
+    this.weightTokens();
+    callback();
   }
 
   scoreWords(array, word) {
@@ -96,21 +84,21 @@ class CatSearchEngine {
   }
 
   highlightWord(sentence, word) {
-    var index = sentence.indexOf(word)
+    var index = sentence.indexOf(word);
     if (index !== -1) {
-      const neighborhoodSymbols = 30
+      const neighborhoodSymbols = 30;
       var startPos = sentence.indexOf(" ", index - neighborhoodSymbols);
       var endPos = sentence.indexOf(" ", index + word.length + neighborhoodSymbols);
-      var prefix = "", suffix = ""
+      var prefix = "", suffix = "";
       if (startPos > index || startPos < 0) {
-        startPos = 0
+        startPos = 0;
       } else {
-        prefix = "..."
+        prefix = "...";
       }
       if (endPos < index || endPos > sentence.length) {
-        endPos = undefined
+        endPos = undefined;
       } else {
-        suffix = "..."
+        suffix = "...";
       }
       var shortString = prefix + sentence.slice(startPos, endPos) + suffix;
       var shortIndex = shortString.indexOf(word);
@@ -120,9 +108,9 @@ class CatSearchEngine {
         highlightWord: word,
         excerpt1: shortString.slice(0, shortIndex),
         excerpt2: shortString.slice(shortIndex + word.length)
-      }
+      };
     } else {
-      return null
+      return null;
     }
   }
 
@@ -131,10 +119,10 @@ class CatSearchEngine {
     var result = [];
     for (let breed in Cats) {
       let totalScore = 0;
-      let data = Cats[breed]
-      let tokens = data.tokens;
+      let data = Cats[breed];
+      let tokens = data.model;
       let spotlight = {score: 0, word: ""};
-      for (let t = 0; t < tokens.length; ++t) {
+      for (let t in tokens) {
         let token = tokens[t];
         let wordScore = 0;
         wordScore += this.scoreWords(queryWords, token.word);
@@ -150,7 +138,6 @@ class CatSearchEngine {
         }
       }
       data.totalScore = totalScore;
-      data.breed = breed;
       if (totalScore > 0) {
         data.title =
           this.highlightWord(data.did_you_know, spotlight.word) ||
@@ -162,8 +149,8 @@ class CatSearchEngine {
           this.highlightWord(data.description, tokens[0].word) ||
           this.highlightWord(data.size, tokens[0].word) ||
           this.highlightWord(data.coat, tokens[0].word) ||
-          this.highlightWord(data.color, tokens[0].word)
-        console.log('search', totalScore, spotlight, data.title, data)
+          this.highlightWord(data.color, tokens[0].word);
+        console.log('search', totalScore, spotlight, data.title, data);
         result.push(data);
       }
     }
