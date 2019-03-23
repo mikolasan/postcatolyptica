@@ -4,8 +4,6 @@
   "private": true,
   "dependencies": {
     "bootstrap": "4.2.1",
-    "natural": "0.6.3",
-    "pos": "^0.4.2",
     "react": "^16.5.2",
     "react-dom": "^16.5.2",
     "react-scripts": "2.0.3",

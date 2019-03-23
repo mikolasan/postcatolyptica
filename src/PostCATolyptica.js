@@ -1,37 +1,31 @@
+//vim :set ts=2 sw=2 sts=2 et :
+
 import React, { Component } from 'react';
 import TitlePage from './TitlePage';
 import SearchResults from './SearchResults';
-import Engine from './engine';
 
-let engine = null;
-let engineReady = false;
 
-class PostCAToliptica extends Component {
+class PostCATolyptica extends Component {
   constructor(props) {
     super(props);
+    this.host = 'localhost'
+    this.port = 3000
     this.state = {
       showResults: false
     }
   }
 
-  componentDidMount() {
-    engine = new Engine((err, data) => {
-      if (!err) {
-        engineReady = true;
-      } else {
-        console.log(err)
-      }
-    });
-  }
-
   searchPressed(query) {
-    if (query.length > 0 && engineReady) {
-      let results = engine.search(query);
-      console.log("searchPressed", query, results.length)
-      this.setState({
-        showResults: true,
-        results: results
-      })
+    if (query.length > 0) {
+      fetch(`http://localhost:3000/search?q=${query}`)
+		.then(res => res.json())
+		.then(results => {
+		  console.log("searchPressed", query, results.length)
+		  this.setState({
+			showResults: true,
+			results: results
+		  })
+		})
     }
   }
 
@@ -49,4 +43,4 @@ class PostCAToliptica extends Component {
   }
 }
 
-export default PostCAToliptica;
+export default PostCATolyptica;
