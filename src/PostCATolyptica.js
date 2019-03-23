@@ -8,8 +8,8 @@ import SearchResults from './SearchResults';
 class PostCATolyptica extends Component {
   constructor(props) {
     super(props);
-    this.host = 'localhost'
-    this.port = 3000
+    this.host = 'https://postcatolyptica.herokuapp.com'
+    //this.host = 'http://localhost:4000'
     this.state = {
       showResults: false
     }
@@ -17,7 +17,7 @@ class PostCATolyptica extends Component {
 
   searchPressed(query) {
     if (query.length > 0) {
-      fetch(`http://localhost:3000/search?q=${query}`)
+      fetch(`${this.host}/search?q=${query}`)
 		.then(res => res.json())
 		.then(results => {
 		  console.log("searchPressed", query, results.length)
