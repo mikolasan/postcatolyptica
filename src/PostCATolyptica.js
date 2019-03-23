@@ -8,7 +8,7 @@ import SearchResults from './SearchResults';
 class PostCATolyptica extends Component {
   constructor(props) {
     super(props);
-    this.host = 'https://postcatolyptica.herokuapp.com'
+    this.host = 'https://postcatolyptica-ai.herokuapp.com'
     //this.host = 'http://localhost:4000'
     this.state = {
       showResults: false
