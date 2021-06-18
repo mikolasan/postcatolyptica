@@ -8,7 +8,7 @@ import SearchResults from './SearchResults';
 class PostCATolyptica extends Component {
   constructor(props) {
     super(props);
-    this.host = 'https://postcatolyptica-ai.herokuapp.com'
+    this.host = 'https://postcatolyptica.netlify.app'
     //this.host = 'http://localhost:4000'
     this.state = {
       showResults: false
@@ -17,7 +17,7 @@ class PostCATolyptica extends Component {
 
   searchPressed(query) {
     if (query.length > 0) {
-      fetch(`${this.host}/search?q=${query}`)
+      fetch(`${this.host}/api/search?q=${query}`)
 		.then(res => res.json())
 		.then(results => {
 		  console.log("searchPressed", query, results.length)
